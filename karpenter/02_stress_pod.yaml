@@ -1,0 +1,26 @@
+# kubectl apply -f 02_stress_pod.yaml
+# kubectl scale deployment stress --replicas 2
+# kubectl scale deployment stress --replicas 6
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stress
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: stress
+  template:
+    metadata:
+      labels:
+        app: stress
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: stress
+          image: public.ecr.aws/eks-distro/kubernetes/pause:3.7
+          resources:
+            requests:
+              cpu: 1
+      nodeSelector:
+        node-auto-scaling: karpenter
