@@ -45,6 +45,9 @@ helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter --vers
 --set controller.resources.limits.memory=1Gi \
 --wait
 
+export NODE_IAM_ROLE_ARN="arn:aws:iam::$AWS_ACCOUNT_ID:role/KarpenterNodeRole-$CLUSTER_NAME"
+aws eks create-access-entry --cluster-name eks-cluster --principal-arn $NODE_IAM_ROLE_ARN --type EC2_LINUX > /dev/null
+
 wget -O eks-node-viewer https://github.com/awslabs/eks-node-viewer/releases/download/v0.7.1/eks-node-viewer_Linux_x86_64
 chmod +x eks-node-viewer
 sudo mv -v eks-node-viewer /usr/local/bin
