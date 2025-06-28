@@ -1,0 +1,107 @@
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    eks.amazonaws.com/pod-readiness-gate-inject: enabled
+  name: bluegreen
+---
+# Active Service
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    rollout: bluegreen
+  name: bluegreen-acive-svc
+  namespace: bluegreen
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    rollout: bluegreen
+  type: ClusterIP
+---
+# Preview Service
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    rollout: bluegreen
+  name: bluegreen-preview-svc
+  namespace: bluegreen
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    rollout: bluegreen
+  type: ClusterIP
+---
+# Rollout
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: bluegreen-rollout
+  namespace: bluegreen
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      rollout: bluegreen
+  strategy:
+    blueGreen:
+      abortScaleDownDelaySeconds: 30
+      activeService: bluegreen-active-svc
+      autoPromotionEnabled: true
+      autoPromotionSeconds: 5
+      previewReplicaCount: 1
+      previewService: bluegreen-preview-svc
+      scaleDownDelayRevisionLimit: 1
+      scaleDownDelaySeconds: 10
+  template:
+    metadata:
+      labels:
+        rollout: bluegreen
+    spec:
+      containers:
+        image: nginx:latest
+        imagePullPolicy: Always
+        name: web
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        startupProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          failureThreshold: 6
+          successThreshold: 1
+---
+# Targetgroupbinding
+apiVersion: eks.amazonaws.com/v1
+kind: TargetGroupBinding
+metadata:
+  name: bluegreen-tgb
+  namespace: bluegreen
+spec:
+  serviceRef:
+    name: bluegreen-active-svc
+    port: 80
+  targetGroupARN: ALB_TARGETGROUP_ARN
+  targetType: ip
