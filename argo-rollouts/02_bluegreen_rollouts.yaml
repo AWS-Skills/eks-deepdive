@@ -12,7 +12,7 @@ kind: Service
 metadata:
   labels:
     rollout: bluegreen
-  name: bluegreen-acive-svc
+  name: bluegreen-active-svc
   namespace: bluegreen
 spec:
   ports:
@@ -70,7 +70,7 @@ spec:
         rollout: bluegreen
     spec:
       containers:
-        image: nginx:latest
+      - image: nginx:latest
         imagePullPolicy: Always
         name: web
         ports:
@@ -94,7 +94,8 @@ spec:
           successThreshold: 1
 ---
 # Targetgroupbinding
-apiVersion: eks.amazonaws.com/v1
+apiVersion: elbv2.k8s.aws/v1beta1
+# apiVersion: eks.amazonaws.com/v1 # AutoMode
 kind: TargetGroupBinding
 metadata:
   name: bluegreen-tgb

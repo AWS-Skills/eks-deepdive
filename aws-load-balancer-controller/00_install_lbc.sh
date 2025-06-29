@@ -1,18 +1,18 @@
 #!/bin/bash
-export aws_region=""
-export cluster_name=""
-# echo "aws_region=''" >>/home/ec2-user/.bashrc
-# echo "cluster_name=''" >>/home/ec2-user/.bashrc
+export AWS_REGION=""
+export CLUSTER_NAME=""
+# echo "AWS_REGION=''" >>/home/ec2-user/.bashrc
+# echo "CLUSTER_NAME=''" >>/home/ec2-user/.bashrc
 source /home/ec2-user/.bashrc
-vpc_id=$(aws eks describe-cluster --name $cluster_name --query "cluster.resourcesVpcConfig.vpcId" --output text)
-account_id=$(aws sts get-caller-identity --query "Account" --output text)
+VPC_ID=$(aws eks describe-cluster --name $CLUSTER_NAME --query "cluster.resourcesVpcConfig.vpcId" --output text)
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 
 # https://docs.aws.amazon.com/ko_kr/eks/latest/userguide/lbc-helm.html
 
-oidc_id=$(aws eks describe-cluster --name $cluster_name --query "cluster.identity.oidc.issuer" --output text | cut -d '/' -f 5)
-echo $oidc_id
-eksctl utils associate-iam-oidc-provider --cluster $cluster_name --approve
-aws iam list-open-id-connect-providers | grep $oidc_id | cut -d "/" -f4
+OIDC_ID=$(aws eks describe-cluster --name $CLUSTER_NAME --query "cluster.identity.oidc.issuer" --output text | cut -d '/' -f 5)
+echo $OIDC_ID
+eksctl utils associate-iam-oidc-provider --cluster $CLUSTER_NAME --approve
+aws iam list-open-id-connect-providers | grep $OIDC_ID | cut -d "/" -f4
 
 curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/refs/heads/main/docs/install/iam_policy.json
 aws iam create-policy \
@@ -21,18 +21,18 @@ aws iam create-policy \
 rm iam_policy.json
 
 eksctl create iamserviceaccount \
---cluster=$cluster_name \
+--cluster=$CLUSTER_NAME \
 --namespace=kube-system \
 --name=aws-load-balancer-controller \
 --role-name AmazonEKSLoadBalancerControllerRole \
---attach-policy-arn="arn:aws:iam::$account_id:policy/AWSLoadBalancerControllerIAMPolicy" \
---approve --region $aws_region
+--attach-policy-arn="arn:aws:iam::$ACCOUNT_ID:policy/AWSLoadBalancerControllerIAMPolicy" \
+--approve --region $AWS_REGION
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update eks
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n kube-system \
---set clusterName=$cluster_name \
+--set clusterName=$CLUSTER_NAME \
 --set serviceAccount.create=false \
 --set serviceAccount.name=aws-load-balancer-controller \
---set region=$aws_region \
---set vpcId=$vpc_id
+--set region=$AWS_REGION \
+--set vpcId=$VPC_ID
 kubectl rollout status -n kube-system deploy aws-load-balancer-controller
